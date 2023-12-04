@@ -1,0 +1,19 @@
+{
+	"cmd": ["qemu-system-riscv64", "-machine", "virt", "-nographic", "-m", "728M", "-smp", "2", "-kernel", "images/riscv/.ignore/uboot.elf", "-device", "virtio-rng-pci", "-drive", "file=images/riscv/.ignore/ubuntu-23.10-preinstalled-server-riscv64.img,format=raw,if=virtio", "-drive", "file=images/riscv/.ignore/user-data.img,format=raw", "-device", "virtio-net-device,netdev=eth0", "-netdev", "user,id=eth0,hostfwd=tcp::10022-:22"],
+	"files": {
+		"images/riscv/.ignore/uboot.elf": [
+			"wget -O images/riscv https://mirrors.edge.kernel.org/ubuntu/pool/main/u/u-boot/u-boot-qemu_2023.07%2Bdfsg-1ubuntu2_all.deb",
+			"dpkg-deb -x images/riscv/u-boot-qemu_2023.07%2Bdfsg-1ubuntu2_all.deb images/riscv/deb-tmp",
+			"mv images/riscv/deb-tmp/usr/lib/u-boot/qemu-riscv64_smode/uboot.elf images/riscv/.ignore/uboot.elf",
+			"rm -rf images/riscv/deb-tmp"
+		]
+		"images/riscv/.ignore/ubuntu-23.10-preinstalled-server-riscv64.img": [
+			"wget -O images/riscv/ https://cdimage.ubuntu.com/releases/23.10/release/ubuntu-23.10-preinstalled-server-riscv64.img.xz",
+			"tar -xvf images/riscv/ubuntu-23.10-preinstalled-server-riscv64.img.xz -C images/riscv/.ignore",
+			"rm images/riscv/ubuntu-23.10-preinstalled-server-riscv64.img.xz"
+		],
+		"images/riscv/.ignore/user-data.img": [
+			"dd if=images/riscv/user-data of=images/riscv/.ignore/user-data.img"
+		]
+	}
+}
