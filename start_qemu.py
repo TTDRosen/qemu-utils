@@ -1,12 +1,10 @@
 import argparse
 import json
-from pathutils import Path
+from pathlib import Path
 import psutil
 import subprocess
 import signal
 import sys
-
-from disable_vfio import main as dmain
 
 def get_network_interfaces():
     interfaces = psutil.net_if_addrs().keys()
@@ -40,7 +38,6 @@ def main():
 
     instructions = json.load(open(f"images/{args.cpu}/cmd.json"))
 
-    cmd = instructions["cmd"]
     files = instructions["files"]
 
     for file, cmds in files.items():
@@ -49,11 +46,14 @@ def main():
             print(f"{path} doesn't exist now downloading")
             path.parent.mkdir(parents=True, exist_ok=True)
             for cmd in cmds:
+                print(f"\t>>> {cmd}")
                 subprocess.run(cmd, cwd=Path(__file__).parent, check=True, shell=True)
             assert path.exists(), f"After running commands to generate {path}, it still didn't exist"
 
     # teardown_bridge(allow_failure = True)
     # setup_bridge()
+
+    cmd = instructions["cmd"]
 
     output = subprocess.run(["lspci", "-n", "-D", "-d", "1e52:"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
     for device in output.stdout.splitlines():
@@ -61,6 +61,9 @@ def main():
         id = device.split()[0]
 
         cmd.extend(["-device", f"vfio-pci,host={id}"])
+
+    # Add sudo to allow for forwarding of pci devices.
+    cmd.insert(0, "sudo")
 
     process = None
     rc = 0
@@ -74,7 +77,9 @@ def main():
             process.send_signal(signal.SIGINT)
             rc = process.wait()
     print(f"Exited qemu with {rc}")
-    dmain()
+
+    # Doing this so I don't need to run the entire script as su
+    subprocess.run(["make", "stop-qemu"], check=True)
     # teardown_bridge()
 
 if __name__ == "__main__":
