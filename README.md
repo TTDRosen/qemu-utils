@@ -20,6 +20,15 @@ To quit (and return pci devices to host) press ctrl-a x
 
 ## Setting up TT software
 
+### Inital Config
+
+Hopefully a temporary section, but the default Ubutnu 23.10 install doesn't actually work with Rust. So we have to do a few updates for things to work.
+
+```bash
+sudo apt install -y linux-image-6.5.0-14-generic linux-headers-6.5.0.14-generic
+sudo reboot
+```
+
 ### Driver
 
 To start the image won't have the driver or dkms, to install those run
@@ -53,6 +62,8 @@ Then install tt-smi itself
 ```
 python3 -m venv .env
 . ./.env/bin/activate
-pip install git+https://github.com/tenstorrent/tt-smi
+CARGO_BUILD_TARGET=riscv64gc-unknown-linux-gnu pip install git+https://github.com/tenstorrent/tt-smi
 ```
+
+Now you can run `tt-smi` as normal.
 
