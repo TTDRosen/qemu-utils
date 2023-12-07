@@ -6,6 +6,43 @@ A lot of the basics of setting up qemu can be found at https://yyz-gitlab.local.
 
 ## Starting the Image
 
+### Dependencies
+
+To run the Makefile you need psutil and qemu
+```bash
+pip3 install psutil
+sudo apt update && sudo apt install -y qemu-utils qemu-system-misc
+```
+
+To use this repo you need a semi recent version of qemu. So if you get any errors you may have to build qemu yourself (fortunatly this is straight forward).
+
+```bash
+sudo apt update && sudo apt install -y git libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev ninja-build libcapstone-dev sudo apt install meson libglib2.0-dev valgrind
+```
+
+After getting the build dependencies build and install libslirp (this will allow networking to work)
+
+```bash
+git clone https://gitlab.com/qemu-project/libslirp.git
+cd libslirp
+git checkout v4.7.0
+meson build
+sudo ninja -C build install
+```
+
+Then build and install qemu
+
+```bash
+wget https://download.qemu.org/qemu-8.2.0-rc2.tar.xz
+tar xvJf qemu-8.2.0-rc2.tar.xz
+cd qemu-8.2.0-rc2
+./configure --enable-slirp
+make
+sudo make install
+```
+
+### Running
+
 To start the riscv image run `make` in the root of the repo.
 
 #### Riscv
@@ -25,7 +62,7 @@ To quit (and return pci devices to host) press ctrl-a x
 Hopefully a temporary section, but the default Ubutnu 23.10 install doesn't actually work with Rust. So we have to do a few updates for things to work.
 
 ```bash
-sudo apt install -y linux-image-6.5.0-14-generic linux-headers-6.5.0.14-generic
+sudo apt install -y linux-image-6.5.0-14-generic linux-headers-6.5.0-14-generic
 sudo reboot
 ```
 
