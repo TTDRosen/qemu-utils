@@ -1,0 +1,43 @@
+From db488ed03173e246fa75df4c5552ff9632fcb74a Mon Sep 17 00:00:00 2001
+From: Daniel Rosen <drosen@tenstorrent.com>
+Date: Tue, 26 Dec 2023 16:21:05 -0500
+Subject: [PATCH] Added modules_prepare to linux.mk target
+
+---
+ linux/linux.mk | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/linux/linux.mk b/linux/linux.mk
+index 1db5c604..cdaf92e3 100644
+--- a/linux/linux.mk
++++ b/linux/linux.mk
+@@ -546,6 +546,26 @@ LINUX_MAKE_FLAGS += INSTALL_MOD_STRIP=1
+ endif
+ 
+ define LINUX_INSTALL_TARGET_CMDS
++	rm -rf $(@D)-clean
++	cp -r $(@D) $(@D)-clean
++
++        $(LINUX_MAKE_ENV) $(BR2_MAKE1) $(LINUX_MAKE_FLAGS) -C $(@D)-clean mrproper
++
++        cp $(@D)/.config $(@D)-clean
++        cp $(@D)/.config.old $(@D)-clean
++
++        $(LINUX_MAKE_ENV) $(BR2_MAKE1) $(LINUX_MAKE_FLAGS) -C $(@D)-clean oldconfig
++
++	rm $(@D)-clean/.config
++	rm $(@D)-clean/.config.old
++	rm -rf $(@D)-clean/include/config
++	rm -rf $(@D)-clean/arch/$(KERNEL_ARCH)/include/generated
++
++        $(LINUX_MAKE_ENV) $(BR2_MAKE1) $(LINUX_MAKE_FLAGS) -C $(@D)-clean O=$(TARGET_DIR)/usr/src/linux-headers modules_prepare
++
++	rm $(TARGET_DIR)/usr/src/linux-headers/source
++	cp $(@D)/Module.symvers $(TARGET_DIR)/usr/src/linux-headers
++
+ 	$(LINUX_INSTALL_KERNEL_IMAGE_TO_TARGET)
+ 	# Install modules and remove symbolic links pointing to build
+ 	# directories, not relevant on the target
+-- 
+2.25.1
+

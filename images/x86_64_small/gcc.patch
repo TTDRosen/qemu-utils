@@ -1,0 +1,171 @@
+From c9a628e879d436663f4640ff0d550681cff18549 Mon Sep 17 00:00:00 2001
+From: Daniel Rosen <drosen@tenstorrent.com>
+Date: Sun, 24 Dec 2023 15:43:32 -0500
+Subject: [PATCH] Added package for target gcc
+
+---
+ Makefile                               |  4 +-
+ package/Config.in                      |  1 +
+ package/gcc/Config.in                  | 21 +++++++
+ package/gcc/gcc-target/gcc-target.hash |  1 +
+ package/gcc/gcc-target/gcc-target.mk   | 78 ++++++++++++++++++++++++++
+ 5 files changed, 103 insertions(+), 2 deletions(-)
+ create mode 120000 package/gcc/gcc-target/gcc-target.hash
+ create mode 100644 package/gcc/gcc-target/gcc-target.mk
+
+diff --git a/Makefile b/Makefile
+index ac625152..606d0672 100644
+--- a/Makefile
++++ b/Makefile
+@@ -725,13 +725,13 @@ target-finalize: $(PACKAGES) $(TARGET_DIR) host-finalize
+ 	@$(call MESSAGE,"Finalizing target directory")
+ 	$(call per-package-rsync,$(sort $(PACKAGES)),target,$(TARGET_DIR),copy)
+ 	$(foreach hook,$(TARGET_FINALIZE_HOOKS),$($(hook))$(sep))
+-	rm -rf $(TARGET_DIR)/usr/include $(TARGET_DIR)/usr/share/aclocal \
++	rm -rf $(TARGET_DIR)/usr/share/aclocal \
+ 		$(TARGET_DIR)/usr/lib/pkgconfig $(TARGET_DIR)/usr/share/pkgconfig \
+ 		$(TARGET_DIR)/usr/lib/cmake $(TARGET_DIR)/usr/share/cmake \
+ 		$(TARGET_DIR)/usr/lib/rpm $(TARGET_DIR)/usr/doc
+ 	find $(TARGET_DIR)/usr/{lib,share}/ -name '*.cmake' -print0 | xargs -0 rm -f
+ 	find $(TARGET_DIR)/lib/ $(TARGET_DIR)/usr/lib/ $(TARGET_DIR)/usr/libexec/ \
+-		\( -name '*.a' -o -name '*.la' -o -name '*.prl' \) -print0 | xargs -0 rm -f
++		\( -name '*.la' -o -name '*.prl' \) -print0 | xargs -0 rm -f
+ ifneq ($(BR2_PACKAGE_GDB),y)
+ 	rm -rf $(TARGET_DIR)/usr/share/gdb
+ endif
+diff --git a/package/Config.in b/package/Config.in
+index b0e18436..39bacc82 100644
+--- a/package/Config.in
++++ b/package/Config.in
+@@ -182,6 +182,7 @@ menu "Development tools"
+ 	source "package/dos2unix/Config.in"
+ 	source "package/findutils/Config.in"
+ 	source "package/flex/Config.in"
++	source "package/gcc/Config.in"
+ 	source "package/gawk/Config.in"
+ 	source "package/gettext/Config.in"
+ 	source "package/gettext-gnu/Config.in"
+diff --git a/package/gcc/Config.in b/package/gcc/Config.in
+index d2a26abb..91f397a7 100644
+--- a/package/gcc/Config.in
++++ b/package/gcc/Config.in
+@@ -1,3 +1,24 @@
++config BR2_PACKAGE_GCC_TARGET
++	bool "gcc"
++	depends on BR2_TOOLCHAIN_BUILDROOT
++	select BR2_PACKAGE_BINUTILS
++	select BR2_PACKAGE_BINUTILS_TARGET
++	select BR2_PACKAGE_GMP
++	select BR2_PACKAGE_MPFR
++	select BR2_PACKAGE_MPC
++	help
++	  If you want the target system to be able to run
++	  binutils/gcc and compile native code, say Y here.
++
++config BR2_EXTRA_TARGET_GCC_CONFIG_OPTIONS
++	string "Additional target gcc options"
++	default ""
++	depends on BR2_PACKAGE_GCC_TARGET
++	help
++	  Any additional target gcc options you may want to include....
++	  Including, but not limited to --disable-checking etc.
++	  Refer to */configure in your gcc sources.
++
+ config BR2_PACKAGE_GCC_FINAL
+ 	bool
+ 	default y if BR2_TOOLCHAIN_BUILDROOT
+diff --git a/package/gcc/gcc-target/gcc-target.hash b/package/gcc/gcc-target/gcc-target.hash
+new file mode 120000
+index 00000000..7ac9361a
+--- /dev/null
++++ b/package/gcc/gcc-target/gcc-target.hash
+@@ -0,0 +1 @@
++../gcc.hash
+\ No newline at end of file
+diff --git a/package/gcc/gcc-target/gcc-target.mk b/package/gcc/gcc-target/gcc-target.mk
+new file mode 100644
+index 00000000..56673f39
+--- /dev/null
++++ b/package/gcc/gcc-target/gcc-target.mk
+@@ -0,0 +1,78 @@
++################################################################################
++#
++# gcc-target
++#
++################################################################################
++
++GCC_TARGET_VERSION = $(GCC_VERSION)
++GCC_TARGET_SITE = $(GCC_SITE)
++GCC_TARGET_SOURCE = $(GCC_SOURCE)
++
++# Use the same archive as gcc-initial and gcc-final
++GCC_TARGET_DL_SUBDIR = gcc
++
++GCC_TARGET_DEPENDENCIES = gmp mpfr mpc
++
++# First, we use HOST_GCC_COMMON_MAKE_OPTS to get a lot of correct flags (such as
++# the arch, abi, float support, etc.) which are based on the config used to
++# build the internal toolchain
++GCC_TARGET_CONF_OPTS = $(HOST_GCC_COMMON_CONF_OPTS)
++# Then, we modify incorrect flags from HOST_GCC_COMMON_CONF_OPTS
++GCC_TARGET_CONF_OPTS += \
++	--with-sysroot=/ \
++	--with-build-sysroot=$(STAGING_DIR) \
++	--disable-__cxa_atexit \
++	--with-gmp=$(STAGING_DIR) \
++	--with-mpc=$(STAGING_DIR) \
++	--with-mpfr=$(STAGING_DIR)
++# Then, we force certain flags that may appear in HOST_GCC_COMMON_CONF_OPTS
++GCC_TARGET_CONF_OPTS += \
++	--disable-libquadmath \
++	--disable-libsanitizer \
++	--disable-plugin \
++	--disable-lto
++# Finally, we add some of our own flags
++GCC_TARGET_CONF_OPTS += \
++	--enable-languages=c \
++	--disable-boostrap \
++	--disable-libgomp \
++	--disable-nls \
++	--disable-libmpx \
++	--disable-gcov \
++	$(EXTRA_TARGET_GCC_CONFIG_OPTIONS)
++
++GCC_TARGET_CONF_ENV = $(HOST_GCC_COMMON_CONF_ENV)
++
++GCC_TARGET_MAKE_OPTS += $(HOST_GCC_COMMON_MAKE_OPTS)
++
++# Install standard C headers (from glibc)
++define GCC_TARGET_INSTALL_HEADERS
++	cp -r $(STAGING_DIR)/usr/include $(TARGET_DIR)/usr
++endef
++GCC_TARGET_POST_INSTALL_TARGET_HOOKS += GCC_TARGET_INSTALL_HEADERS
++
++# Install standard C libraries (from glibc)
++GCC_TARGET_GLIBC_LIBS = \
++	*crt*.o *_nonshared.a \
++	libBrokenLocale.so libanl.so libbfd.so libc.so libcrypt.so libdl.so \
++	libm.so libnss_compat.so libnss_db.so libnss_files.so libnss_hesiod.so \
++	libpthread.so libresolv.so librt.so libthread_db.so libutil.so
++
++define GCC_TARGET_INSTALL_LIBS
++	for libpattern in $(GCC_TARGET_GLIBC_LIBS); do \
++		$(call copy_toolchain_lib_root,$$libpattern) ; \
++	done
++endef
++GCC_TARGET_POST_INSTALL_TARGET_HOOKS += GCC_TARGET_INSTALL_LIBS
++
++# Remove unnecessary files (extra links to gcc binaries, and libgcc which is
++# already in `/lib`)
++define GCC_TARGET_RM_FILES
++	rm -f $(TARGET_DIR)/usr/bin/$(ARCH)-buildroot-linux-gnu-gcc*
++	rm -f $(TARGET_DIR)/usr/lib/libgcc_s*.so*
++	rm -f $(TARGET_DIR)/usr/$(ARCH)-buildroot-linux-gnu/lib/ldscripts/elf32*
++	rm -f $(TARGET_DIR)/usr/$(ARCH)-buildroot-linux-gnu/lib/ldscripts/elf64b*
++endef
++GCC_TARGET_POST_INSTALL_TARGET_HOOKS += GCC_TARGET_RM_FILES
++
++$(eval $(autotools-package))
+-- 
+2.25.1
+

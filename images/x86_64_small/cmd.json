@@ -1,0 +1,22 @@
+{
+	"cmd": ["qemu-system-x86_64", "-enable-kvm", "-nographic", "-m", "1G", "-smp", "2", "-kernel", ".ignore/x86_64_small/bzImage", "-drive", "file=.ignore/x86_64_small/rootfs.ext2,format=raw", "-append", "\"root=/dev/sda console=ttyS0\"", "-netdev", "user,id=eth0,hostfwd=tcp:127.0.0.1:10022-:22", "-device", "e1000,netdev=eth0"],
+	"files": {
+		".ignore/x86_64_small/bzImage": [
+			"# rm -rf .ignore/build/buildroot",
+			"# mkdir -p .ignore/build",
+			"# mkdir -p .ignore/x86_64_small",
+			"# git clone https://github.com/buildroot/buildroot.git --depth 1 .ignore/build/buildroot",
+			"# cd .ignore/build/buildroot && git apply ../../../images/x86_64_small/gcc.patch",
+			"# cd .ignore/build/buildroot && git apply ../../../images/x86_64_small/linux-headers.patch",
+			"# cd .ignore/build/buildroot && ./support/kconfig/merge_config.sh configs/qemu_x86_64_defconfig ../../../images/x86_64_small/buildroot.config",
+			"# cd .ignore/build/buildroot && cat configs/qemu_x86_64_defconfig > tmp.config",
+			"# cd .ignore/build/buildroot && cat ../../../images/x86_64_small/buildroot.config >> tmp.config",
+			"# cd .ignore/build/buildroot && export TO_REPLACE=\"BR2_ROOTFS_POST_BUILD_SCRIPT=\\\"board/qemu/x86_64/post-build.sh\" && export REPLACE_WITH=\"${TO_REPLACE} ../../../images/x86_64_small/postbuild.sh\\\"\" && export TO_REPLACE=\"${TO_REPLACE}\\\"\" && if grep -q \"${TO_REPLACE}\" \"tmp.config\"; then sed -i \"s!${TO_REPLACE}!${REPLACE_WITH}!\" \"tmp.config\"; echo \"Replaced '${TO_REPLACE}' with '${REPLACE_WITH}' in config file 'tmp.config'\"; else echo \"Could not find '${TO_REPLACE}' in config file 'tmp.config'\"; exit 1; fi",
+			"# cd .ignore/build/buildroot && make KCONFIG_ALLCONFIG=tmp.config alldefconfig",
+			"make -C ./.ignore/build/buildroot",
+			"cp .ignore/build/buildroot/output/images/bzImage .ignore/x86_64_small/",
+			"cp .ignore/build/buildroot/output/images/rootfs.ext2 .ignore/x86_64_small/",
+			"# rm -rf .ignore/build/buildroot"
+		]
+	}
+}
