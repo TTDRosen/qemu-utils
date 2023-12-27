@@ -38,7 +38,7 @@ def main():
 
     instructions = json.load(open(f"images/{args.cpu}/cmd.json"))
 
-    files = instructions["files"]
+    files = instructions.get("files", {})
 
     for file, cmds in files.items():
         path = Path(file)
@@ -68,7 +68,7 @@ def main():
     process = None
     rc = 0
     try:
-        process = subprocess.Popen(cmd, stdin=sys.stdin)
+        process = subprocess.Popen(" ".join(cmd), stdin=sys.stdin, shell=True)
         rc = process.wait()
     except KeyboardInterrupt as e:
         if process is None:

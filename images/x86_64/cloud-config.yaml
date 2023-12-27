@@ -1,0 +1,18 @@
+#cloud-config
+users:
+        - name: dev
+          plain_text_passwd: dev
+          sudo: "ALL=(ALL) NOPASSWD:ALL"
+          lock_passwd: false
+
+ssh_pwauth: true
+
+package_update: true
+package_upgrade: true
+package_reboot_if_required: true
+
+packages:
+        - dkms
+        - linux-headers-generic
+        - gcc
+        - rsync
